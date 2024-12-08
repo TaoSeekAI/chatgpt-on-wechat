@@ -8,6 +8,10 @@ from common.log import logger
 from plugins import *
 from config import conf
 
+import sqlite3
+import threading
+import time
+from datetime import datetime
 
 @plugins.register(
     name="Hello",
@@ -37,9 +41,34 @@ class Hello(Plugin):
             self.patpat_prompt = self.config.get("patpat_prompt", self.patpat_prompt)
             logger.info("[Hello] inited")
             self.handlers[Event.ON_HANDLE_CONTEXT] = self.on_handle_context
+
+            self.running = True
+            self.timer_thread = threading.Thread(target=self.schedule_task)
+            self.timer_thread.start()
+
         except Exception as e:
             logger.error(f"[Hello]初始化异常：{e}")
             raise "[Hello] init failed, ignore "
+
+    def schedule_task(self):
+        """定时任务函数"""
+        while self.running:
+            try:
+                current_time = datetime.now()
+                # 假设我们想每隔5分钟检查一次数据库
+                if current_time.second % 10 == 0:
+                    # self.check_and_send_messages()
+                    logger.info("[Hello] 10s checking")
+
+                    reply = Reply()
+                    reply.type = ReplyType.TEXT
+                    reply.content = "time checking...."
+
+                # 等待1分钟再检查
+                time.sleep(5)
+            except Exception as e:
+                logger.error(f"[Hello] Schedule task error: {e}")
+                time.sleep(60)
 
     def on_handle_context(self, e_context: EventContext):
         if e_context["context"].type not in [
@@ -68,7 +97,7 @@ class Hello(Plugin):
             if not self.config or not self.config.get("use_character_desc"):
                 e_context["context"]["generate_breaked_by"] = EventAction.BREAK
             return
-        
+
         if e_context["context"].type == ContextType.EXIT_GROUP:
             if conf().get("group_chat_exit_group"):
                 e_context["context"].type = ContextType.TEXT
@@ -77,7 +106,7 @@ class Hello(Plugin):
                 return
             e_context.action = EventAction.BREAK
             return
-            
+
         if e_context["context"].type == ContextType.PATPAT:
             e_context["context"].type = ContextType.TEXT
             e_context["context"].content = self.patpat_prompt
