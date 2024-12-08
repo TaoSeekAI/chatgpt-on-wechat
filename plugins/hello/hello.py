@@ -43,7 +43,7 @@ class Hello(Plugin):
             self.handlers[Event.ON_HANDLE_CONTEXT] = self.on_handle_context
 
             self.running = True
-            self.timer_thread = threading.Thread(target=self.schedule_task)
+            self.timer_thread = threading.Thread(target=self.schedule_task, daemon=True)
             self.timer_thread.start()
 
         except Exception as e:
